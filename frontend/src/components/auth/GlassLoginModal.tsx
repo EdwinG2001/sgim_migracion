@@ -125,12 +125,6 @@ export const GlassLoginModal: React.FC<GlassLoginModalProps> = ({
     }
   };
 
-  const setQuickCreds = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    setError(null);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fadeIn">
       {/* Contenedor Glassmorphism */}
@@ -216,57 +210,6 @@ export const GlassLoginModal: React.FC<GlassLoginModalProps> = ({
                 </a>
               </div>
             </form>
-
-            {/* Cuentas del Equipo (QA Tester) */}
-            <div className="mt-6 pt-4 border-t border-white/20">
-              <p className="text-[10px] text-white/70 text-center uppercase tracking-wider mb-2">
-                Cuentas del Equipo (1 Clic QA):
-              </p>
-              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                <button
-                  type="button"
-                  onClick={() => setQuickCreds('admin', 'Admin2026*')}
-                  className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-left transition-colors truncate cursor-pointer"
-                  title="San Lucas Arroyo Edwin Guillermo (admin)"
-                >
-                  👑 <b>Admin</b> (Edwin)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickCreds('intriagoofimi@gmail.com', 'in12345')}
-                  className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-left transition-colors truncate cursor-pointer"
-                  title="Intriago Salazar Josue Leonardo (oficial_migracion)"
-                >
-                  🛂 <b>Migración</b> (Josue)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickCreds('corozoanalis@gmail.com', 'co12345')}
-                  className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-left transition-colors truncate cursor-pointer"
-                  title="Corozo Angulo Milena Jazmin (analista_pi)"
-                >
-                  🛡️ <b>Refugio PI</b> (Milena)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuickCreds('caisavisas@gmail.com', 'ca12345')}
-                  className="p-1.5 rounded bg-white/10 hover:bg-white/20 text-left transition-colors truncate cursor-pointer"
-                  title="Caisa Preciado Franklin Andres (analista_visas)"
-                >
-                  📑 <b>Visas</b> (Franklin)
-                </button>
-              </div>
-              <div className="mt-1.5">
-                <button
-                  type="button"
-                  onClick={() => setQuickCreds('caicedoregu@gmail.com', 'les12345')}
-                  className="w-full p-1.5 text-[11px] rounded bg-white/10 hover:bg-white/20 text-center transition-colors truncate cursor-pointer"
-                  title="Caicedo Medina Lessly Jelena (analista_regularizacion)"
-                >
-                  📋 <b>Regularización & Censos</b> (Lessly)
-                </button>
-              </div>
-            </div>
 
             {/* Pestaña inferior: Cambiar a CREAR USUARIO LIMPIO */}
             <div className="mt-6 -mx-8 -mb-8 p-3.5 text-center bg-white/10 border-t border-white/20 backdrop-blur-sm">
