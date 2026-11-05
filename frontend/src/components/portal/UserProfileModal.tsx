@@ -112,7 +112,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 Mi Cuenta y Perfil Migratorio
               </h2>
               <p className="text-xs text-slate-400">
-                {user.username} • <span className="uppercase text-blue-400 font-semibold">{user.rol}</span>
+                {user.username} • <span className="text-blue-400 font-semibold">{user.rol === 'solo_lectura' ? 'Ciudadano' : user.rol}</span>
               </p>
             </div>
           </div>

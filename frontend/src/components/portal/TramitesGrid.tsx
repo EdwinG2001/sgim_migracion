@@ -42,12 +42,12 @@ export const TramitesGrid: React.FC<TramitesGridProps> = ({ onSelectTramite, onS
   };
 
   const modulosGoMap: Record<string, string> = {
-    movimientos: 'Módulo 2: Control Migratorio (Intriago Salazar Josue Leonardo)',
-    prorrogas: 'Módulo 3: Visas y Prórrogas (Caisa Preciado Franklin Andres)',
-    refugio: 'Módulo 1: Protección Internacional (Corozo Angulo Milena Jazmin)',
-    visas_residencia: 'Módulo 3: Emisión de Visas (Caisa Preciado Franklin Andres)',
-    censo_virte: 'Módulo 4: Regularización y Censos (Caicedo Medina Lessly Jelena)',
-    consulta_expediente: 'Capa Transversal: Búsqueda Indexada en MongoDB',
+    movimientos: 'Intriago Salazar Josue Leonardo (Módulo 2: Control Migratorio)',
+    prorrogas: 'Intriago Salazar Josue Leonardo (Módulo 2: Control Migratorio)',
+    refugio: 'Corozo Angulo Milena Jazmin (Módulo 1: Protección Internacional)',
+    visas_residencia: 'Caisa Preciado Franklin Andres (Módulo 3: Visas de Residencia)',
+    censo_virte: 'Caicedo Medina Lessly Jelena (Módulo 4: Regularización y Censos)',
+    consulta_expediente: 'Ventanilla Digital SGIM (Consulta Pública Automatizada)',
   };
 
   const rawTypeMap: Record<string, string> = {

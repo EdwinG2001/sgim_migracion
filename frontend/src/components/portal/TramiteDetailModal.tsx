@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, CheckCircle, Clock, Shield, ArrowRight } from 'lucide-react';
+import { X, CheckCircle, Clock, ArrowRight, User } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 
 interface TramiteDetailModalProps {
@@ -69,8 +69,8 @@ export const TramiteDetailModal: React.FC<TramiteDetailModalProps> = ({ tramite,
           </div>
 
           <div className="p-3 rounded-lg bg-blue-50/70 border border-blue-100 text-[11px] text-blue-800 flex items-center gap-2">
-            <Shield className="w-4 h-4 text-blue-600 shrink-0" />
-            <span><b>Gestor Backend:</b> {tramite.moduloGo}</span>
+            <User className="w-4 h-4 text-blue-600 shrink-0" />
+            <span><b>Funcionario Encargado:</b> {tramite.moduloGo}</span>
           </div>
         </div>
 

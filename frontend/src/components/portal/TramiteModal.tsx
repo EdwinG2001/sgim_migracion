@@ -174,7 +174,7 @@ export const TramiteModal: React.FC<TramiteModalProps> = ({
                 {tramiteTitle}
               </h3>
               <p className="text-xs text-slate-400">
-                Titular registrado: <b>{user?.username}</b> (Rol: {user?.rol})
+                Titular registrado: <b>{user?.username}</b>
               </p>
             </div>
           </div>

@@ -226,9 +226,6 @@ export const RequisitosSection: React.FC<RequisitosSectionProps> = ({ onStartTra
                         <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                           {item.categoria}
                         </span>
-                        <span className="text-xs font-mono text-slate-400">
-                          ID: {item.rawType}
-                        </span>
                       </div>
 
                       <h3 className="text-lg sm:text-xl font-bold text-slate-900">
