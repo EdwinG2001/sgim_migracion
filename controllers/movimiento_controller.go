@@ -179,3 +179,52 @@ func (c *MovimientoController) Listar(w http.ResponseWriter, r *http.Request) {
 	views.RenderPaginated(w, "Movimientos migratorios", list, page, limit, total)
 }
 
+// Anular marca un movimiento migratorio como "anulado"
+func (c *MovimientoController) Anular(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch && r.Method != http.MethodPost {
+		views.RenderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		return
+	}
+
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		idStr = r.URL.Query().Get("id")
+	}
+
+	movID, err := filters.ParseObjectID(idStr)
+	if err != nil {
+		views.RenderError(w, http.StatusBadRequest, "ID de movimiento inválido")
+		return
+	}
+
+	claims, _ := middlewares.GetUserFromContext(r)
+	actorID, _ := filters.ParseObjectID(claims.UserID)
+
+	db := config.GetDatabaseInstance()
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	coll := db.Collection("movimientos")
+
+	var anterior models.Movimiento
+	if err := coll.FindOne(ctx, bson.M{"_id": movID}).Decode(&anterior); err != nil {
+		views.RenderError(w, http.StatusNotFound, "Movimiento no encontrado")
+		return
+	}
+
+	_, err = coll.UpdateOne(ctx, bson.M{"_id": movID}, bson.M{"$set": bson.M{
+		"estado": "anulado",
+	}})
+	if err != nil {
+		views.RenderError(w, http.StatusInternalServerError, "Error anulando movimiento migratorio", err.Error())
+		return
+	}
+
+	var actualizada models.Movimiento
+	_ = coll.FindOne(ctx, bson.M{"_id": movID}).Decode(&actualizada)
+
+	_ = models.RegistrarAuditoria(ctx, actorID, models.AccionUpdate, "movimientos", movID, anterior, actualizada, nil)
+
+	views.RenderSuccess(w, http.StatusOK, "Movimiento migratorio anulado exitosamente", actualizada)
+}
+

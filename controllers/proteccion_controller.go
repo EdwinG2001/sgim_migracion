@@ -284,3 +284,79 @@ func (c *ProteccionController) AsignarBeneficio(w http.ResponseWriter, r *http.R
 	views.RenderSuccess(w, http.StatusCreated, "Beneficio asignado", beneficio)
 }
 
+type UpdateEstadoSolicitudPIDTO struct {
+	Estado        string `json:"estado"`        // en_tramite, aprobado, rechazado, archivado
+	Observaciones string `json:"observaciones"` // motivo u observaciones del analista
+}
+
+// ActualizarEstado permite a analista_pi y admin cambiar el estado (Aprobar, Rechazar, Archivar/Aplazar)
+func (c *ProteccionController) ActualizarEstado(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPatch && r.Method != http.MethodPost {
+		views.RenderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		return
+	}
+
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		idStr = r.URL.Query().Get("id")
+	}
+
+	solID, err := filters.ParseObjectID(idStr)
+	if err != nil {
+		views.RenderError(w, http.StatusBadRequest, "ID de solicitud inválido")
+		return
+	}
+
+	var dto UpdateEstadoSolicitudPIDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		views.RenderError(w, http.StatusBadRequest, "JSON inválido")
+		return
+	}
+
+	estadosValidos := map[string]bool{
+		"en_tramite": true,
+		"aprobado":   true,
+		"rechazado":  true,
+		"archivado":  true,
+	}
+
+	if !estadosValidos[dto.Estado] {
+		views.RenderError(w, http.StatusBadRequest, "Estado inválido. Valores permitidos: en_tramite, aprobado, rechazado, archivado")
+		return
+	}
+
+	claims, _ := middlewares.GetUserFromContext(r)
+	actorID, _ := filters.ParseObjectID(claims.UserID)
+
+	db := config.GetDatabaseInstance()
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+
+	coll := db.Collection("solicitudes_pi")
+
+	var anterior models.SolicitudPI
+	if err := coll.FindOne(ctx, bson.M{"_id": solID}).Decode(&anterior); err != nil {
+		views.RenderError(w, http.StatusNotFound, "Solicitud de protección internacional no encontrada")
+		return
+	}
+
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	updateFields := bson.M{
+		"estado":     dto.Estado,
+		"updated_at": now,
+	}
+
+	_, err = coll.UpdateOne(ctx, bson.M{"_id": solID}, bson.M{"$set": updateFields})
+	if err != nil {
+		views.RenderError(w, http.StatusInternalServerError, "Error actualizando estado de solicitud", err.Error())
+		return
+	}
+
+	var actualizada models.SolicitudPI
+	_ = coll.FindOne(ctx, bson.M{"_id": solID}).Decode(&actualizada)
+
+	_ = models.RegistrarAuditoria(ctx, actorID, models.AccionUpdate, "solicitudes_pi", solID, anterior, actualizada, nil)
+
+	views.RenderSuccess(w, http.StatusOK, fmt.Sprintf("Estado de solicitud actualizado a '%s'", dto.Estado), actualizada)
+}
+

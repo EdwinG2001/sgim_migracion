@@ -63,6 +63,9 @@ func SetupRouter() http.Handler {
 		middlewares.RequireRoles(models.RolAdmin, models.RolAnalistaPI)(proteccionCtrl.CrearSolicitud),
 	))
 	mux.HandleFunc("GET /api/proteccion/solicitudes", middlewares.AuthMiddleware(proteccionCtrl.ListarSolicitudes))
+	mux.HandleFunc("PATCH /api/proteccion/solicitudes/{id}/estado", middlewares.AuthMiddleware(
+		middlewares.RequireRoles(models.RolAdmin, models.RolAnalistaPI)(proteccionCtrl.ActualizarEstado),
+	))
 	mux.HandleFunc("POST /api/proteccion/visas", middlewares.AuthMiddleware(
 		middlewares.RequireRoles(models.RolAdmin, models.RolAnalistaPI)(proteccionCtrl.EmitirVisa),
 	))
@@ -75,10 +78,16 @@ func SetupRouter() http.Handler {
 		middlewares.RequireRoles(models.RolAdmin, models.RolOficialMigracion)(movimientoCtrl.Registrar),
 	))
 	mux.HandleFunc("GET /api/movimientos", middlewares.AuthMiddleware(movimientoCtrl.Listar))
+	mux.HandleFunc("PATCH /api/movimientos/{id}/anular", middlewares.AuthMiddleware(
+		middlewares.RequireRoles(models.RolAdmin, models.RolOficialMigracion)(movimientoCtrl.Anular),
+	))
 
 	// 6. Módulo 3: Emisión y Prórroga de Visas de Residencia
 	mux.HandleFunc("POST /api/visas/solicitudes", middlewares.AuthMiddleware(visaCtrl.Solicitar))
 	mux.HandleFunc("GET /api/visas/solicitudes", middlewares.AuthMiddleware(visaCtrl.ListarSolicitudes))
+	mux.HandleFunc("PATCH /api/visas/solicitudes/{id}/estado", middlewares.AuthMiddleware(
+		middlewares.RequireRoles(models.RolAdmin, models.RolAnalistaVisas)(visaCtrl.ActualizarEstado),
+	))
 	mux.HandleFunc("POST /api/visas/emitir", middlewares.AuthMiddleware(
 		middlewares.RequireRoles(models.RolAdmin, models.RolAnalistaVisas)(visaCtrl.Emitir),
 	))

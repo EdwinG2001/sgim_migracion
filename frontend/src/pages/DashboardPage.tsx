@@ -9,7 +9,11 @@ import {
   Activity, 
   Database, 
   CheckCircle2, 
-  RefreshCw
+  RefreshCw,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -35,6 +39,19 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
 
   const [loading, setLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+
+  // Modal de acción / confirmación (Rechazar / Aplazar / Anular)
+  const [actionModal, setActionModal] = useState<{
+    isOpen: boolean;
+    tipo: 'pi' | 'visa' | 'mov';
+    id: string;
+    nuevoEstado: string;
+    titulo: string;
+    descripcion: string;
+    color: string;
+  } | null>(null);
+  const [observacionesInput, setObservacionesInput] = useState('');
+  const [submittingAction, setSubmittingAction] = useState(false);
 
   // Cargar datos en vivo del backend Go
   const loadData = async () => {
@@ -142,6 +159,45 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
       }
     } catch (err: any) {
       alert(err.response?.data?.error || 'Error emitiendo visa');
+    }
+  };
+
+  // Función para ejecutar cambio de estado confirmado (Rechazar / Aplazar / Anular)
+  const handleConfirmAction = async () => {
+    if (!actionModal) return;
+    setSubmittingAction(true);
+    try {
+      if (actionModal.tipo === 'pi') {
+        const res = await api.patch(`/proteccion/solicitudes/${actionModal.id}/estado`, {
+          estado: actionModal.nuevoEstado,
+          observaciones: observacionesInput
+        });
+        if (res.data?.success) {
+          setActionMsg(`✅ Solicitud PI actualizada a estado: '${actionModal.nuevoEstado}'`);
+        }
+      } else if (actionModal.tipo === 'visa') {
+        const res = await api.patch(`/visas/solicitudes/${actionModal.id}/estado`, {
+          estado: actionModal.nuevoEstado,
+          observaciones: observacionesInput
+        });
+        if (res.data?.success) {
+          setActionMsg(`✅ Solicitud de Visa actualizada a estado: '${actionModal.nuevoEstado}'`);
+        }
+      } else if (actionModal.tipo === 'mov') {
+        const res = await api.patch(`/movimientos/${actionModal.id}/anular`, {
+          motivo: observacionesInput
+        });
+        if (res.data?.success) {
+          setActionMsg(`⚠️ Movimiento migratorio #${actionModal.id?.slice(-8)} anulado exitosamente`);
+        }
+      }
+      setActionModal(null);
+      setObservacionesInput('');
+      loadData();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Error al procesar la acción administrativa');
+    } finally {
+      setSubmittingAction(false);
     }
   };
 
@@ -358,21 +414,124 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
                             <td className="px-3 py-2 max-w-xs truncate">{sol.motivo_salida}</td>
                             <td className="px-3 py-2">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                sol.estado === 'aprobado' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'
+                                sol.estado === 'aprobado' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                sol.estado === 'rechazado' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                sol.estado === 'archivado' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                               }`}>
                                 {sol.estado}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-slate-400">{sol.fecha_solicitud ? new Date(sol.fecha_solicitud).toLocaleDateString() : 'N/A'}</td>
                             <td className="px-3 py-2 text-right">
-                              {sol.estado === 'en_tramite' && (
-                                <button
-                                  onClick={() => handleEmitirVisaPI(sol.id)}
-                                  className="px-2.5 py-1 text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors cursor-pointer"
-                                >
-                                  Aprobar y Emitir Visa PI
-                                </button>
-                              )}
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                {sol.estado === 'en_tramite' && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEmitirVisaPI(sol.id)}
+                                      title="Aprobar trámite y emitir Visa Humanitaria"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Aprobar y Emitir</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        setObservacionesInput('');
+                                        setActionModal({
+                                          isOpen: true,
+                                          tipo: 'pi',
+                                          id: sol.id,
+                                          nuevoEstado: 'archivado',
+                                          titulo: 'Aplazar / Archivar Solicitud PI',
+                                          descripcion: `¿Desea aplazar la solicitud #${sol.id?.slice(-8)} (${sol.pais_origen})? El trámite quedará en pausa a la espera de subsanación de requisitos.`,
+                                          color: 'amber'
+                                        });
+                                      }}
+                                      title="Aplazar trámite / Archivar temporalmente"
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-600/80 border border-amber-500/30 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <Clock className="w-3.5 h-3.5" />
+                                      <span>Aplazar</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        setObservacionesInput('');
+                                        setActionModal({
+                                          isOpen: true,
+                                          tipo: 'pi',
+                                          id: sol.id,
+                                          nuevoEstado: 'rechazado',
+                                          titulo: 'Rechazar Solicitud de Protección',
+                                          descripcion: `¿Confirma el rechazo administrativo de la solicitud #${sol.id?.slice(-8)} (${sol.pais_origen})?`,
+                                          color: 'red'
+                                        });
+                                      }}
+                                      title="Rechazar solicitud"
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-300 hover:text-white bg-red-500/10 hover:bg-red-600/80 border border-red-500/30 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Rechazar</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {sol.estado === 'archivado' && (
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        setObservacionesInput('');
+                                        setActionModal({
+                                          isOpen: true,
+                                          tipo: 'pi',
+                                          id: sol.id,
+                                          nuevoEstado: 'en_tramite',
+                                          titulo: 'Reanudar Evaluación de Solicitud',
+                                          descripcion: `¿Desea reactivar la solicitud #${sol.id?.slice(-8)} y ponerla nuevamente en estado 'en_tramite'?`,
+                                          color: 'indigo'
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      <span>Reanudar</span>
+                                    </button>
+
+                                    <button
+                                      onClick={() => {
+                                        setObservacionesInput('');
+                                        setActionModal({
+                                          isOpen: true,
+                                          tipo: 'pi',
+                                          id: sol.id,
+                                          nuevoEstado: 'rechazado',
+                                          titulo: 'Rechazar Solicitud Archivada',
+                                          descripcion: `¿Confirma el rechazo definitivo de la solicitud #${sol.id?.slice(-8)}?`,
+                                          color: 'red'
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-300 hover:text-white bg-red-500/10 hover:bg-red-600/80 border border-red-500/30 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Rechazar</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {sol.estado === 'aprobado' && (
+                                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                    Completado / Visa Emitida
+                                  </span>
+                                )}
+
+                                {sol.estado === 'rechazado' && (
+                                  <span className="text-[10px] text-red-400 font-semibold px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20">
+                                    Rechazado Oficialmente
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -417,21 +576,106 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
                             <td className="px-3 py-2 font-semibold capitalize">{visa.tipo_visa}</td>
                             <td className="px-3 py-2">
                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                visa.estado === 'emitida' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-300'
+                                visa.estado === 'emitida' || visa.estado === 'aprobada' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                                visa.estado === 'rechazada' ? 'bg-red-500/20 text-red-400 border border-red-500/30' :
+                                visa.estado === 'en_revision' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                                'bg-blue-500/20 text-blue-300 border border-blue-500/30'
                               }`}>
                                 {visa.estado}
                               </span>
                             </td>
                             <td className="px-3 py-2 text-slate-400">{visa.fecha_solicitud ? new Date(visa.fecha_solicitud).toLocaleDateString() : 'N/A'}</td>
                             <td className="px-3 py-2 text-right">
-                              {visa.estado !== 'emitida' && (
-                                <button
-                                  onClick={() => handleEmitirVisaOrdinaria(visa.id)}
-                                  className="px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors cursor-pointer"
-                                >
-                                  Aprobar y Emitir Visa
-                                </button>
-                              )}
+                              <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                {(visa.estado === 'recibida' || visa.estado === 'en_revision' || visa.estado === 'aprobada') && (
+                                  <>
+                                    <button
+                                      onClick={() => handleEmitirVisaOrdinaria(visa.id)}
+                                      title="Aprobar trámite y emitir Visa de Residencia"
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Aprobar y Emitir</span>
+                                    </button>
+
+                                    {visa.estado === 'recibida' && (
+                                      <button
+                                        onClick={() => {
+                                          setObservacionesInput('');
+                                          setActionModal({
+                                            isOpen: true,
+                                            tipo: 'visa',
+                                            id: visa.id,
+                                            nuevoEstado: 'en_revision',
+                                            titulo: 'Poner Solicitud En Revisión / Aplazar',
+                                            descripcion: `¿Desea cambiar la solicitud #${visa.id?.slice(-8)} a estado 'en_revision' para subsanación o solicitud de requisitos adicionales?`,
+                                            color: 'amber'
+                                          });
+                                        }}
+                                        title="Poner en revisión / Aplazar"
+                                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-amber-300 hover:text-white bg-amber-500/10 hover:bg-amber-600/80 border border-amber-500/30 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        <Clock className="w-3.5 h-3.5" />
+                                        <span>En Revisión</span>
+                                      </button>
+                                    )}
+
+                                    {visa.estado === 'en_revision' && (
+                                      <button
+                                        onClick={() => {
+                                          setObservacionesInput('');
+                                          setActionModal({
+                                            isOpen: true,
+                                            tipo: 'visa',
+                                            id: visa.id,
+                                            nuevoEstado: 'recibida',
+                                            titulo: 'Reabrir Solicitud como Recibida',
+                                            descripcion: `¿Desea volver la solicitud #${visa.id?.slice(-8)} al estado 'recibida'?`,
+                                            color: 'indigo'
+                                          });
+                                        }}
+                                        title="Reabrir a estado recibida"
+                                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-blue-300 hover:text-white bg-blue-500/10 hover:bg-blue-600/80 border border-blue-500/30 rounded-lg transition-colors cursor-pointer"
+                                      >
+                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <span>Reabrir</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      onClick={() => {
+                                        setObservacionesInput('');
+                                        setActionModal({
+                                          isOpen: true,
+                                          tipo: 'visa',
+                                          id: visa.id,
+                                          nuevoEstado: 'rechazada',
+                                          titulo: 'Rechazar Solicitud de Visa',
+                                          descripcion: `¿Confirma el rechazo administrativo de la solicitud de visa #${visa.id?.slice(-8)}?`,
+                                          color: 'red'
+                                        });
+                                      }}
+                                      title="Rechazar solicitud de visa"
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-300 hover:text-white bg-red-500/10 hover:bg-red-600/80 border border-red-500/30 rounded-lg transition-colors cursor-pointer"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Rechazar</span>
+                                    </button>
+                                  </>
+                                )}
+
+                                {visa.estado === 'emitida' && (
+                                  <span className="text-[10px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                    Emitida Oficialmente
+                                  </span>
+                                )}
+
+                                {visa.estado === 'rechazada' && (
+                                  <span className="text-[10px] text-red-400 font-semibold px-2 py-0.5 rounded bg-red-500/10 border border-red-500/20">
+                                    Rechazada Oficialmente
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -467,7 +711,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
                           <th className="px-3 py-2">Transporte</th>
                           <th className="px-3 py-2">Motivo</th>
                           <th className="px-3 py-2">Días Autorizados</th>
+                          <th className="px-3 py-2">Estado</th>
                           <th className="px-3 py-2">Fecha y Hora</th>
+                          <th className="px-3 py-2 text-right">Acción</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-700/50 text-slate-300">
@@ -484,7 +730,40 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
                             <td className="px-3 py-2 capitalize">{m.medio_transporte}</td>
                             <td className="px-3 py-2">{m.motivo_viaje}</td>
                             <td className="px-3 py-2 font-bold">{m.dias_permitidos} días</td>
+                            <td className="px-3 py-2">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                m.estado === 'activo' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-slate-600/40 text-slate-400 border border-slate-600/50'
+                              }`}>
+                                {m.estado || 'activo'}
+                              </span>
+                            </td>
                             <td className="px-3 py-2 text-slate-400">{m.fecha_hora ? new Date(m.fecha_hora).toLocaleString() : 'N/A'}</td>
+                            <td className="px-3 py-2 text-right">
+                              {m.estado !== 'anulado' && (
+                                <button
+                                  onClick={() => {
+                                    setObservacionesInput('');
+                                    setActionModal({
+                                      isOpen: true,
+                                      tipo: 'mov',
+                                      id: m.id,
+                                      nuevoEstado: 'anulado',
+                                      titulo: 'Anular Registro de Movimiento Fronterizo',
+                                      descripcion: `¿Confirma la anulación del registro migratorio #${m.id?.slice(-8)} en ${m.punto_control}? La trazabilidad quedará guardada en la bitácora inmutable.`,
+                                      color: 'red'
+                                    });
+                                  }}
+                                  title="Anular movimiento migratorio"
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-red-300 hover:text-white bg-red-500/10 hover:bg-red-600/80 border border-red-500/30 rounded-lg transition-colors cursor-pointer"
+                                >
+                                  <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span>Anular</span>
+                                </button>
+                              )}
+                              {m.estado === 'anulado' && (
+                                <span className="text-[10px] text-slate-500 italic">Anulado</span>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -632,6 +911,67 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onBackToPortal }) 
         )}
 
       </main>
+
+      {/* Modal de Acción / Confirmación Administrativa (Rechazar / Aplazar / Anular) */}
+      {actionModal && actionModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-fadeIn">
+          <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-700">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                {actionModal.color === 'red' && <XCircle className="w-5 h-5 text-red-400" />}
+                {actionModal.color === 'amber' && <Clock className="w-5 h-5 text-amber-400" />}
+                {actionModal.color === 'indigo' && <RotateCcw className="w-5 h-5 text-blue-400" />}
+                <span>{actionModal.titulo}</span>
+              </h3>
+              <button
+                onClick={() => setActionModal(null)}
+                className="text-slate-400 hover:text-white text-sm cursor-pointer p-1"
+              >
+                ✕
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              {actionModal.descripcion}
+            </p>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-semibold text-slate-300 block">
+                Motivo / Justificación Administrativa:
+              </label>
+              <textarea
+                value={observacionesInput}
+                onChange={(e) => setObservacionesInput(e.target.value)}
+                placeholder="Ingrese las causales legales o requisitos pendientes a subsanar..."
+                className="w-full h-20 px-3 py-2 text-xs bg-slate-900/80 border border-slate-700 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-700/60">
+              <button
+                onClick={() => setActionModal(null)}
+                disabled={submittingAction}
+                className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleConfirmAction}
+                disabled={submittingAction}
+                className={`px-4 py-1.5 text-xs font-semibold text-white rounded-lg transition-all cursor-pointer shadow-sm ${
+                  actionModal.color === 'red'
+                    ? 'bg-red-600 hover:bg-red-500'
+                    : actionModal.color === 'amber'
+                    ? 'bg-amber-600 hover:bg-amber-500'
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+              >
+                {submittingAction ? 'Procesando...' : 'Confirmar Acción'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
