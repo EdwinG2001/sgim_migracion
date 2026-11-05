@@ -1,0 +1,42 @@
+# Dependencias Node.js
+node_modules/
+*/node_modules/
+package-lock.json
+12/package-lock.json
+frontend/package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Binarios y ejecutables Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+sgim_migracion.exe
+server
+
+# Variables de entorno locales y secretos
+.env
+.env.local
+
+# Build y distribución generados
+dist/
+frontend/dist/
+
+# Logs y volcados locales
+*.log
+out.txt
+backend_err.log
+backend_out.log
+
+# Scripts de base de datos local
+BD/
+12/
+
+# Archivos de sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
