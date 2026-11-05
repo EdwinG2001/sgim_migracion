@@ -32,7 +32,7 @@ interface RequisitosSectionProps {
 }
 
 export const RequisitosSection: React.FC<RequisitosSectionProps> = ({ onStartTramite }) => {
-  const [expandedId, setExpandedId] = useState<string | null>('tramite-2');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const tramitesRequisitos: RequisitoItem[] = [
     {
