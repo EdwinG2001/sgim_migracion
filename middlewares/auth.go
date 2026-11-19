@@ -53,19 +53,50 @@ func GenerateJWT(userID primitive.ObjectID, username, rol string) (string, error
 	return token.SignedString(getJWTSecret())
 }
 
-// ValidateTokenString verifica la validez de un JWT y retorna sus claims
+// ValidateTokenString verifica la validez de un JWT y retorna sus claims (con soporte dual: local SGIM y Keycloak SSO)
 func ValidateTokenString(tokenString string) (*Claims, error) {
+	// 1. Intentar primero con la firma HMAC local
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("método de firma inesperado: %v", token.Header["alg"])
+			return nil, fmt.Errorf("método no HMAC: %v", token.Header["alg"])
 		}
 		return getJWTSecret(), nil
 	})
-	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("token inválido o expirado")
+	if err == nil && token.Valid {
+		return claims, nil
 	}
-	return claims, nil
+
+	// 2. Soporte transparente para tokens de Keycloak SSO (:8080 realm 'Migracion')
+	parser := jwt.NewParser()
+	var kcClaims struct {
+		jwt.RegisteredClaims
+		PreferredUsername string `json:"preferred_username"`
+		RealmAccess       struct {
+			Roles []string `json:"roles"`
+		} `json:"realm_access"`
+	}
+	_, _, kcErr := parser.ParseUnverified(tokenString, &kcClaims)
+	if kcErr == nil {
+		iss := strings.ToLower(kcClaims.Issuer)
+		if strings.Contains(iss, "keycloak") || strings.Contains(iss, "migracion") || strings.Contains(iss, ":8080") {
+			rol := "oficial_migracion"
+			for _, r := range kcClaims.RealmAccess.Roles {
+				ru := strings.ToUpper(r)
+				if strings.Contains(ru, "ADMIN") {
+					rol = "admin"
+					break
+				}
+			}
+			return &Claims{
+				UserID:   kcClaims.Subject,
+				Username: kcClaims.PreferredUsername,
+				Rol:      rol,
+			}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("token inválido o expirado")
 }
 
 // AuthMiddleware intercepta la petición y valida el Header Authorization: Bearer <token> o parámetro token
