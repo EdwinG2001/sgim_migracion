@@ -42,6 +42,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  // Capturar retorno de Keycloak SSO (hash con #access_token=...)
+  useEffect(() => {
+    if (window.location.hash && window.location.hash.includes('access_token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const accessToken = hashParams.get('access_token');
+      if (accessToken) {
+        try {
+          const payloadBase64 = accessToken.split('.')[1];
+          const payloadJson = decodeURIComponent(
+            atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'))
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          const payload = JSON.parse(payloadJson);
+          const roles = payload.realm_access?.roles || [];
+          const isAdmin = roles.includes('ADMIN') || roles.includes('admin');
+          const keycloakUser: UserProfile = {
+            id: payload.sub || 'keycloak-user',
+            username: payload.preferred_username || payload.name || 'admin',
+            rol: isAdmin ? 'admin' : 'oficial_migracion',
+            nombres: payload.given_name || payload.name || 'Operador',
+            apellidos: payload.family_name || 'Keycloak Migración',
+            numero_documento: '1700000000',
+            nacionalidad: 'ECU',
+          };
+          setSession(accessToken, keycloakUser);
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (err) {
+          console.error('Error procesando token Keycloak:', err);
+        }
+      }
+    }
+  }, []);
+
   const setSession = (newToken: string, newUser: UserProfile) => {
     setToken(newToken);
     setUser(newUser);

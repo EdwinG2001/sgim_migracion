@@ -7,7 +7,8 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
-  UserPlus
+  UserPlus,
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -72,6 +73,21 @@ export const GlassLoginModal: React.FC<GlassLoginModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  // Manejo de Keycloak SSO
+  const handleKeycloakSSO = () => {
+    const keycloakBaseUrl = (import.meta as any).env?.VITE_KEYCLOAK_URL || 'http://localhost:8080';
+    const realm = (import.meta as any).env?.VITE_KEYCLOAK_REALM || 'Migracion';
+    const clientId = (import.meta as any).env?.VITE_KEYCLOAK_CLIENT_ID || 'sgim-migracion';
+
+    const authUrl = `${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/auth` +
+      `?client_id=${encodeURIComponent(clientId)}` +
+      `&response_type=token` +
+      `&redirect_uri=${encodeURIComponent(window.location.origin + window.location.pathname)}` +
+      `&scope=openid`;
+
+    window.location.href = authUrl;
+  };
 
   // 1. Manejo de Login
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -210,6 +226,21 @@ export const GlassLoginModal: React.FC<GlassLoginModalProps> = ({
                 </a>
               </div>
             </form>
+
+            {/* Botón Keycloak SSO */}
+            <div className="mt-4 pt-3 border-t border-white/20">
+              <button
+                type="button"
+                onClick={handleKeycloakSSO}
+                className="w-full py-2.5 bg-slate-950/80 hover:bg-black text-white font-semibold text-xs rounded-xl border border-white/20 transition-all flex items-center justify-center space-x-2 shadow-lg cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                <span>Iniciar con Keycloak SSO (:8080)</span>
+              </button>
+              <p className="text-[10px] text-center text-white/60 mt-1">
+                Realm: <span className="font-semibold text-emerald-300">Migracion</span>
+              </p>
+            </div>
 
             {/* Pestaña inferior: Cambiar a CREAR USUARIO LIMPIO */}
             <div className="mt-6 -mx-8 -mb-8 p-3.5 text-center bg-white/10 border-t border-white/20 backdrop-blur-sm">
