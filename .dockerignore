@@ -16,4 +16,8 @@ backend_err.log
 backend_out.log
 .vscode
 .idea
+BACKEND
+*.rar
+script bdd
+scripts
 
