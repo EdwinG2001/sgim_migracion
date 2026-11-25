@@ -23,10 +23,10 @@ WORKDIR /app
 
 RUN apk add --no-cache git ca-certificates
 
-COPY go.mod go.sum ./
+COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-COPY . ./
+COPY backend/ ./
 
 # Compilar binario estático optimizado para Linux de producción
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o server main.go

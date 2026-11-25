@@ -19,7 +19,10 @@ import (
 func loadEnvFile() {
 	file, err := os.Open(".env")
 	if err != nil {
-		return // En Render o Docker las variables vienen del sistema
+		file, err = os.Open("../.env")
+		if err != nil {
+			return // En Render o Docker las variables vienen del sistema
+		}
 	}
 	defer file.Close()
 

@@ -5,10 +5,10 @@
   "description": "SGIM - Sistema de Gestion Integral Migratoria del Ecuador (Go + MongoDB + React)",
   "scripts": {
     "build:frontend": "npm --prefix frontend run build",
-    "build:backend": "go build -o sgim_migracion.exe main.go",
+    "build:backend": "cd backend && go build -o sgim_migracion.exe main.go",
     "build": "npm run build:frontend && npm run build:backend",
-    "start": "go run main.go",
+    "start": "cd backend && go run main.go",
     "dev:frontend": "npm --prefix frontend run dev",
-    "dev": "go run main.go"
+    "dev": "cd backend && go run main.go"
   }
 }

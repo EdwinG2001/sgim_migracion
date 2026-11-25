@@ -117,6 +117,8 @@ func SetupRouter() http.Handler {
 	if _, err := os.Stat(distDir); os.IsNotExist(err) {
 		if _, errRoot := os.Stat("./dist"); errRoot == nil {
 			distDir = "./dist"
+		} else if _, errParent := os.Stat("../frontend/dist"); errParent == nil {
+			distDir = "../frontend/dist"
 		}
 	}
 
